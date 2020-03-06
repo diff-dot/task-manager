@@ -1,4 +1,5 @@
-import { ConfigManager, RedisConfig } from '@diff./config-manager';
+import { ConfigManager } from '@diff./config-manager';
+import { RedisConfig } from '@diff./redis-client';
 
 const config = new ConfigManager<RedisConfig>();
 config.setDevelopmentConfig({

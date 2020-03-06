@@ -9,14 +9,14 @@ import {
   ChangeMessageVisibilityBatchRequestEntryList
 } from 'aws-sdk/clients/sqs';
 import { serialize, deserialize } from 'class-transformer';
-import { RedisClient } from '@diff./redis-client';
+import { RedisClient, RedisConfig } from '@diff./redis-client';
 import { DuplicatedCheckInError } from './errors/DuplicatedCheckInError';
 import { Task } from './Task';
 import { FIFOTask } from './FIFOTask';
 import { TaskCarrier } from './TaskCarrier';
 import { PromiseResult } from 'aws-sdk/lib/request';
 import { PromiseUtils, ArrayUtils } from './utils';
-import { ConfigManager, RedisConfig } from '@diff./config-manager';
+import { ConfigManager } from '@diff./config-manager';
 
 const RECEIVE_MAX_NUMBER_OF_TASK = 10;
 const RECEIVE_WAIT_SECOND = 20;
@@ -356,7 +356,7 @@ export class TaskManager {
   }
 
   private get redisClient() {
-    return RedisClient.host(this.config, REDIS_HOST);
+    return RedisClient.host(REDIS_HOST);
   }
 
   private sqsClient(taskUri: string): SQS {
