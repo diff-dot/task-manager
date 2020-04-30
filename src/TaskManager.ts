@@ -9,14 +9,13 @@ import {
   ChangeMessageVisibilityBatchRequestEntryList
 } from 'aws-sdk/clients/sqs';
 import { serialize, deserialize } from 'class-transformer';
-import { RedisClient, RedisConfig } from '@diff./redis-client';
+import { RedisClient, RedisHostOptions, Redis } from '@diff./redis-client';
 import { DuplicatedCheckInError } from './errors/DuplicatedCheckInError';
 import { Task } from './Task';
 import { FIFOTask } from './FIFOTask';
 import { TaskCarrier } from './TaskCarrier';
 import { PromiseResult } from 'aws-sdk/lib/request';
 import { PromiseUtils, ArrayUtils } from './utils';
-import { ConfigManager } from '@diff./config-manager';
 
 const RECEIVE_MAX_NUMBER_OF_TASK = 10;
 const RECEIVE_WAIT_SECOND = 20;
@@ -27,21 +26,19 @@ const CHECK_IN_DEFAULT_TTL = 600; // 10분
 // 이를 극복하기 위해 동시에 지정된 수 만금의 요청을 동시 발송하여 처리 속도 개선
 const BULK_CONCURRENCY_COUNT = 50;
 
-// 체크인 정보를 저장할 레디스 호스트
-const REDIS_HOST = 'tm';
-
 export class TaskManager {
+  private redisClient: Redis;
+
   // 리전별 SQS 인스턴스
   private readonly sqsClientMap: Map<string, SQS> = new Map();
 
   // 테스크 URI에서 추출한 region 정보를 캐싱, 메소드 반복 호출이 많은 관계로 성능 개선 목적
   private readonly uriRegionCache: Map<string, string> = new Map();
 
-  // ConfigManager
-  private readonly config: ConfigManager<RedisConfig>;
+  public constructor(args: { redisHost: RedisHostOptions }) {
+    const { redisHost } = args;
 
-  public constructor(config: ConfigManager<RedisConfig>) {
-    this.config = config;
+    this.redisClient = RedisClient.host(redisHost);
   }
 
   private isFIFOTask(task: Task | FIFOTask): task is FIFOTask {
@@ -353,10 +350,6 @@ export class TaskManager {
 
   private taskCheckInRedisKey<T extends Task>(taskCarrier: TaskCarrier<T>): string {
     return `tm:${taskCarrier.task.constructor.name}:mid:${taskCarrier.messageId}`;
-  }
-
-  private get redisClient() {
-    return RedisClient.host(REDIS_HOST);
   }
 
   private sqsClient(taskUri: string): SQS {

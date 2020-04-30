@@ -1,6 +1,5 @@
 import { expect } from 'chai';
 import { TaskManager, Task, TaskCarrier } from '../../src';
-import config from '../config';
 
 class DummyTask implements Task {
   taskDelay(): undefined {
@@ -11,7 +10,12 @@ class DummyTask implements Task {
   }
 }
 
-const taskManager = new TaskManager(config);
+const taskManager = new TaskManager({
+  redisHost: {
+    host: '127.0.0.1',
+    port: 6379
+  }
+});
 const task = new DummyTask();
 const taskCarrier = new TaskCarrier<DummyTask>();
 taskCarrier.messageId = 'testMessageId';

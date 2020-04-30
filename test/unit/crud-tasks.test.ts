@@ -1,12 +1,16 @@
 import { expect } from 'chai';
 import { TaskManager, TaskCarrier } from '../../src';
-import config from '../config';
 import { DummyTask } from './tasks/DummyTask';
 import { PromiseUtils } from '../../src/utils';
 
 const TASK_BULK_SIZE = 100;
 
-const taskManager = new TaskManager(config);
+const taskManager = new TaskManager({
+  redisHost: {
+    host: '127.0.0.1',
+    port: 6379
+  }
+});
 let tasks: TaskCarrier<DummyTask>[] = [];
 
 describe('crawler > add-many-tasks', async () => {

@@ -1,6 +1,6 @@
 {
   "name": "@diff./task-manager",
-  "version": "1.0.1",
+  "version": "2.0.0",
   "description": "",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -17,8 +17,7 @@
   "author": "DIFF.",
   "license": "ISC",
   "dependencies": {
-    "@diff./config-manager": "^1.1.4",
-    "@diff./redis-client": "^1.1.32",
+    "@diff./redis-client": "^2.0.4",
     "@types/node": "^13.7.7",
     "aws-sdk": "^2.634.0",
     "class-transformer": "^0.2.3",
