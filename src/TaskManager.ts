@@ -17,7 +17,8 @@ import { TaskCarrier } from './TaskCarrier';
 import { PromiseResult } from 'aws-sdk/lib/request';
 import { PromiseUtils, ArrayUtils } from './utils';
 
-const RECEIVE_MAX_NUMBER_OF_TASK = 10;
+const DEFAULT_RECEIVE_NUMBER_OF_TASK = 10;
+const MAX_RECEIVE_TASKS_PER_REUQEST = 10; // SQS 의 요청당 최대 수신 가능 테스크 수
 const RECEIVE_WAIT_SECOND = 20;
 const CHECK_OUT_HOLDING_TTL = 180; // 3분
 const CHECK_IN_DEFAULT_TTL = 600; // 10분
@@ -145,33 +146,50 @@ export class TaskManager {
     };
   }
 
+  /**
+   * 테스크(큐)를 수신
+   * @see https://docs.aws.amazon.com/ko_kr/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-short-and-long-polling.html
+   *
+   * @param cls 테스크 클래스
+   * @param requestTaskCount SQS 는 큐 수신요청당 최대 10개의 메세지만 수신가능, 10개보다 높은 항목이 요청된 경우 다수의 수신요청을 보내 메세지를 수집한 후 반환
+   * @param receiveWaitSecond 큐 수신 요청당 요청 항목을 모두 수신하기까지 대기할 시간
+   */
   public async receiveTasks<T extends Task>(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     cls: { new (...args: any[]): T },
-    maxTaskCount = RECEIVE_MAX_NUMBER_OF_TASK,
+    requestTaskCount = DEFAULT_RECEIVE_NUMBER_OF_TASK,
     receiveWaitSecond = RECEIVE_WAIT_SECOND
   ): Promise<TaskCarrier<T>[]> {
     const taskUri = new cls().taskUri();
-    const res = await this.sqsClient(taskUri)
-      .receiveMessage({
-        QueueUrl: taskUri,
-        MaxNumberOfMessages: maxTaskCount,
-        WaitTimeSeconds: receiveWaitSecond
-      })
-      .promise();
-
     const tasks: TaskCarrier<T>[] = [];
-    if (res.Messages) {
-      for (const msg of res.Messages) {
-        if (!msg.MessageId || !msg.ReceiptHandle || !msg.Body) continue;
-        const carrier = new TaskCarrier<T>();
-        carrier.messageId = msg.MessageId;
-        carrier.receiptHandle = msg.ReceiptHandle;
-        carrier.task = deserialize(cls, msg.Body);
 
-        tasks.push(carrier);
+    const reqCount = Math.ceil(requestTaskCount / MAX_RECEIVE_TASKS_PER_REUQEST);
+    for (let i = 0; i < reqCount; i++) {
+      const maxMessageOfRequest = Math.min(requestTaskCount, MAX_RECEIVE_TASKS_PER_REUQEST);
+      const res = await this.sqsClient(taskUri)
+        .receiveMessage({
+          QueueUrl: taskUri,
+          MaxNumberOfMessages: maxMessageOfRequest,
+          WaitTimeSeconds: receiveWaitSecond
+        })
+        .promise();
+
+      if (res.Messages && res.Messages.length > 0) {
+        for (const msg of res.Messages) {
+          if (!msg.MessageId || !msg.ReceiptHandle || !msg.Body) continue;
+          const carrier = new TaskCarrier<T>();
+          carrier.messageId = msg.MessageId;
+          carrier.receiptHandle = msg.ReceiptHandle;
+          carrier.task = deserialize(cls, msg.Body);
+
+          tasks.push(carrier);
+        }
+      } else {
+        // 수신 항목이 없을 경우 수신가능한 큐가 더이상 없는 것으로 간주하고 루프 종료
+        break;
       }
     }
+
     return tasks;
   }
 

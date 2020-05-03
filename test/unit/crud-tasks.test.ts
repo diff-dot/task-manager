@@ -41,10 +41,10 @@ describe('crawler > add-many-tasks', async () => {
     expect(res.returnedIds.length).to.be.eq(tasks.length);
   });
 
-  it('테스크 재 수신', async () => {
-    await PromiseUtils.usleep(500);
-    tasks = await taskManager.receiveTasks(DummyTask);
-    expect(tasks.length > 0).to.be.true;
+  it('테스크 대량 수신', async () => {
+    await PromiseUtils.usleep(3000);
+    tasks = await taskManager.receiveTasks(DummyTask, 300);
+    expect(tasks.length >= 101).to.be.true;
   });
 
   it('테스크 삭제', async () => {
