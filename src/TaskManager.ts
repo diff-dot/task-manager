@@ -151,7 +151,7 @@ export class TaskManager {
    * @see https://docs.aws.amazon.com/ko_kr/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-short-and-long-polling.html
    *
    * @param cls 테스크 클래스
-   * @param requestTaskCount SQS 는 큐 수신요청당 최대 10개의 메세지만 수신가능, 10개보다 높은 항목이 요청된 경우 다수의 수신요청을 보내 메세지를 수집한 후 반환
+   * @param requestTaskCount SQS 는 큐 수신요청당 최대 10개의 메세지만 수신가능, 10개보다 많은 항목이 요청된 경우 다수의 수신요청을 통해 메세지를 수집한 후 반환
    * @param receiveWaitSecond 큐 수신 요청당 요청 항목을 모두 수신하기까지 대기할 시간
    */
   public async receiveTasks<T extends Task>(
@@ -161,7 +161,7 @@ export class TaskManager {
     receiveWaitSecond = RECEIVE_WAIT_SECOND
   ): Promise<TaskCarrier<T>[]> {
     const taskUri = new cls().taskUri();
-    const tasks: TaskCarrier<T>[] = [];
+    const tasks: Map<string, TaskCarrier<T>> = new Map();
 
     const reqCount = Math.ceil(requestTaskCount / MAX_RECEIVE_TASKS_PER_REUQEST);
     for (let i = 0; i < reqCount; i++) {
@@ -182,7 +182,8 @@ export class TaskManager {
           carrier.receiptHandle = msg.ReceiptHandle;
           carrier.task = deserialize(cls, msg.Body);
 
-          tasks.push(carrier);
+          // tasks.push(carrier);
+          tasks.set(carrier.messageId, carrier);
         }
       } else {
         // 수신 항목이 없을 경우 수신가능한 큐가 더이상 없는 것으로 간주하고 루프 종료
@@ -190,7 +191,7 @@ export class TaskManager {
       }
     }
 
-    return tasks;
+    return [...tasks.values()];
   }
 
   public async deleteTask<T extends Task>(taskCarrier: TaskCarrier<T>): Promise<void> {
