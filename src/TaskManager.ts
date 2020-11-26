@@ -49,7 +49,8 @@ export class TaskManager {
   public async addTask(task: Task): Promise<string> {
     const params: SendMessageRequest = {
       QueueUrl: task.taskUri(),
-      MessageBody: serialize(task, { strategy: 'excludeAll' })
+      // MessageBody: serialize(task, { strategy: 'excludeAll' })
+      MessageBody: serialize(task)
     };
 
     // FIFO Taks 인 경우 그룹 ID 지정
@@ -92,7 +93,8 @@ export class TaskManager {
         const entries = chunk.map(task => {
           const payload: SendMessageBatchRequestEntry = {
             Id: sendId.toString(),
-            MessageBody: serialize(task, { strategy: 'excludeAll' })
+            // MessageBody: serialize(task, { strategy: 'excludeAll' })
+            MessageBody: serialize(task)
           };
 
           if (this.isFIFOTask(task)) {
